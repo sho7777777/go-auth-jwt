@@ -1,3 +1,3 @@
-module resource
+module main
 
 go 1.19

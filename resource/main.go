@@ -1,1 +1,5 @@
-package resource
+package main
+
+func main() {
+
+}
