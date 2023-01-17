@@ -123,3 +123,52 @@ func Refresh(request dto.RefreshTokenRequest) (*dto.LoginResponse, error) {
 	// アクセストークンが有効な場合
 	return nil, errors.New("アクセストークンの期限が切れていません。")
 }
+
+func Verify(urlParams map[string]string) error {
+
+	// 1.
+	jwtToken, err := jwt.ParseWithClaims(urlParams["accessToken"], &domain.AccessTokenClaims{}, func(token *jwt.Token) (interface{}, error) { return []byte(mySigningKey), nil })
+	// jwtToken:  {eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzX3Rva2VuIiwiaWQiOiIxMjM0IiwidXNlcl9uYW1lIjoiSm9obiBEb2UiLCJyb2xlIjoidXNlciIsImV4cCI6MTY3MzkzOTYzOS4yOTE5MzF9.6AjWbUPSD0O8w9eL7TnZ9yyFCYw_WNrm6tRKSoJHTZQ 0xc0000a21b0 map[alg:HS256 typ:JWT] 0xc0000b9220 6AjWbUPSD0O8w9eL7TnZ9yyFCYw_WNrm6tRKSoJHTZQ true}
+
+	if err != nil {
+		return err
+
+		// JWTトークンが有効な場合
+	} else if jwtToken.Valid {
+		// 2. アクセストークンクレームで型キャストする
+		claims := jwtToken.Claims.(*domain.AccessTokenClaims)
+		// claims:  {access_token 1234 John Doe user {[] 2023-01-17 16:13:59.29193 +0900 JST  <nil>  <nil> }}
+
+		// アクセストークンから複合したクレームのidとリクエストのidが異なる場合、内容が改ざんされている
+		if urlParams["id"] != "" && claims.Id != urlParams["id"] {
+			return err
+		}
+
+		// 許可されているメソッドのみアクセス可能にする
+		isAuthorized := false
+		var routeAccessible []string
+
+		// ユーザー権限の場合
+		switch claims.Role {
+		case "user":
+			routeAccessible = domain.GetRouteForUser()
+		case "admin":
+			routeAccessible = domain.GetRouteForAdmin()
+		}
+
+		for _, v := range routeAccessible {
+			if urlParams["routeName"] == v {
+				isAuthorized = true
+			}
+		}
+
+		if !isAuthorized {
+			return errors.New("access not allowed")
+		}
+		return nil
+
+		// JWTトークンが無効な場合
+	} else {
+		return err
+	}
+}
