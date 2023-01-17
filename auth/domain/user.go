@@ -6,8 +6,8 @@ import (
 	"github.com/dgrijalva/jwt-go/v4"
 )
 
-const ACCESS_TOKEN_DURATION = time.Second * 30 // 後でリフレッシュトークンの検証をするため、短めに設定
-const REFRESH_TOKEN_DURATION = time.Minute * 60
+const ACCESS_TOKEN_DURATION = time.Second * 10 // 後でリフレッシュトークンの検証をするため、短めに設定
+const REFRESH_TOKEN_DURATION = time.Second * 20
 
 type User struct {
 	Id       string
