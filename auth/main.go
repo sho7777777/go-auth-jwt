@@ -9,6 +9,7 @@ import (
 	"main/dto"
 	"main/service"
 
+	"github.com/dgrijalva/jwt-go/v4"
 	"github.com/gorilla/mux"
 )
 
@@ -18,6 +19,7 @@ func main() {
 	// エンドポイント
 	r.HandleFunc("/auth/login", http.HandlerFunc(Login)).Methods(http.MethodPost)
 	r.HandleFunc("/auth/refresh", http.HandlerFunc(Refresh)).Methods(http.MethodPost)
+	r.HandleFunc("/auth/verify", http.HandlerFunc(Verify)).Methods(http.MethodGet)
 
 	// サーバー起動
 	fmt.Println("Starting server on port 8001")
@@ -67,6 +69,45 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 		} else {
 			writeResponse(w, http.StatusOK, *token)
 		}
+	}
+}
+
+func Verify(w http.ResponseWriter, r *http.Request) {
+
+	urlParams := make(map[string]string)
+
+	// URLからパラメータを取得し、mapに格納
+	for k := range r.URL.Query() {
+		urlParams[k] = r.URL.Query().Get(k)
+	}
+	fmt.Println("urlParams: ", urlParams)
+	// urlParams: map[accessToken:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzX3Rva2VuIiwiaWQiOiIxMjM0IiwidXNlcl9uYW1lIjoiSm9obiBEb2UiLCJyb2xlIjoidXNlciIsImV4cCI6MTY3MzkzOTYzOS4yOTE5MzF9.6AjWbUPSD0O8w9eL7TnZ9yyFCYw_WNrm6tRKSoJHTZQ id:1234 routeName:getResource]
+
+	// アクセストークンがある場合
+	if urlParams["accessToken"] != "" {
+		err := service.Verify(urlParams)
+
+		// アクセストークンの有効期限が切れている場合
+		if _, ok := err.(*jwt.TokenExpiredError); ok {
+			writeResponse(w, http.StatusNotAcceptable, authResponse(false, "アクセストークンの有効期限が切れています。"))
+
+		} else if err != nil {
+			writeResponse(w, http.StatusNotAcceptable, authResponse(false, err.Error()))
+		} else {
+			writeResponse(w, http.StatusOK, authResponse(true, ""))
+		}
+
+		// アクセストークンがない場合
+	} else {
+		writeResponse(w, http.StatusForbidden, authResponse(false, "missing token"))
+	}
+}
+
+// アクセス可否とエラーメッセージを返す
+func authResponse(isAuthorized bool, message string) map[string]interface{} {
+	return map[string]interface{}{
+		"isAuthorized": isAuthorized,
+		"message":      message,
 	}
 }
 
