@@ -5,28 +5,34 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useCookies } from "react-cookie";
 
 function App() {
+  // 認証情報
   const [id, setId] = useState("1234")
   const [password, setPassword] = useState("pass1234")
+  // エラー
   const [err, setErr] = useState("")
   const [showErr, setShowErr] = useState(false)
+  // クッキー管理
+  const [cookies, setCookies] = useCookies(['accessToken', 'refreshToken']);
+  // ルーティング
   const navigate = useNavigate()
-  const [cookies, setCookie] = useCookies(['accessToken', 'refreshToken']);
-
 
   const getAuth = () => {
     axios.post("http://localhost:8001/auth/login", {
       Id: id,
       Password: password,
+      // 成功した場合、取得したトークンをクッキーをセットし、resourceページに遷移する、
     }).then(res => {
       setShowErr(false)
-      setCookie("accessToken", res.data.access_token, { maxAge: 3600 })
-      setCookie("refreshToken", res.data.refresh_token, { maxAge: 3600 })
+      setCookies("accessToken", res.data.access_token, { maxAge: 3600 })
+      setCookies("refreshToken", res.data.refresh_token, { maxAge: 3600 })
       navigate("/resource")
+      // 失敗した場合はエラーメッセージを表示
     }).catch(err => {
-      console.log(err)
-      console.log(err.response.status)
-      console.log(err.response.data)
-      setErr(err.response.data)
+      if (err.code == "ERR_NETWORK") {
+        setErr("ネットワークにエラーが発生しました。")
+      } else {
+        setErr(err.response.data)
+      }
       setShowErr(true)
     })
   }
@@ -64,7 +70,7 @@ function App() {
           {showErr && <p>{err}</p>}
         </div>}>
       </Route>
-      <Route path="resource/*" element={<Resource cookies={cookies} />}></Route>
+      <Route path="resource/*" element={<Resource cookies={cookies} setCookies={setCookies} />}></Route>
     </Routes >
   );
 }
