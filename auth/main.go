@@ -17,9 +17,9 @@ func main() {
 	r := mux.NewRouter()
 
 	// エンドポイント
-	r.HandleFunc("/auth/login", http.HandlerFunc(Login)).Methods(http.MethodPost)
-	r.HandleFunc("/auth/refresh", http.HandlerFunc(Refresh)).Methods(http.MethodPost)
-	r.HandleFunc("/auth/verify", http.HandlerFunc(Verify)).Methods(http.MethodGet)
+	r.HandleFunc("/auth/login", http.HandlerFunc(Login)).Methods(http.MethodPost, "OPTIONS")
+	r.HandleFunc("/auth/refresh", http.HandlerFunc(Refresh)).Methods(http.MethodPost, "OPTIONS")
+	r.HandleFunc("/auth/verify", http.HandlerFunc(Verify)).Methods(http.MethodGet, "OPTIONS")
 
 	// サーバー起動
 	fmt.Println("Starting server on port 8001")
@@ -29,6 +29,12 @@ func main() {
 }
 
 func Login(w http.ResponseWriter, r *http.Request) {
+	// CORS対応
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Access-Control-Allow-Origin")
+	if r.Method == "OPTIONS" {
+		return
+	}
 
 	// リクエストで受け取ったIDとパスワード格納用DTO
 	var loginRequest dto.LoginRequest
@@ -54,6 +60,12 @@ func Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func Refresh(w http.ResponseWriter, r *http.Request) {
+	// CORS対応
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Access-Control-Allow-Origin")
+	if r.Method == "OPTIONS" {
+		return
+	}
 
 	// アクセストークンとリフレッシュトークンを格納するDTO
 	var refreshRequest dto.RefreshTokenRequest
@@ -64,7 +76,11 @@ func Refresh(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// アクセストークンの取得
 		token, err := service.Refresh(refreshRequest)
-		if err != nil {
+
+		// リフレッシュトークンの有効期限が切れている場合
+		if _, ok := err.(*jwt.TokenExpiredError); ok {
+			writeResponse(w, http.StatusNotAcceptable, authResponse(false, "リフレッシュトークンの有効期限が切れました。"))
+		} else if err != nil {
 			writeResponse(w, http.StatusNotAcceptable, err.Error())
 		} else {
 			writeResponse(w, http.StatusOK, *token)
@@ -80,7 +96,6 @@ func Verify(w http.ResponseWriter, r *http.Request) {
 	for k := range r.URL.Query() {
 		urlParams[k] = r.URL.Query().Get(k)
 	}
-	fmt.Println("urlParams: ", urlParams)
 	// urlParams: map[accessToken:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzX3Rva2VuIiwiaWQiOiIxMjM0IiwidXNlcl9uYW1lIjoiSm9obiBEb2UiLCJyb2xlIjoidXNlciIsImV4cCI6MTY3MzkzOTYzOS4yOTE5MzF9.6AjWbUPSD0O8w9eL7TnZ9yyFCYw_WNrm6tRKSoJHTZQ id:1234 routeName:getResource]
 
 	// アクセストークンがある場合
@@ -89,7 +104,7 @@ func Verify(w http.ResponseWriter, r *http.Request) {
 
 		// アクセストークンの有効期限が切れている場合
 		if _, ok := err.(*jwt.TokenExpiredError); ok {
-			writeResponse(w, http.StatusNotAcceptable, authResponse(false, "アクセストークンの有効期限が切れています。"))
+			writeResponse(w, http.StatusNotAcceptable, authResponse(false, "アクセストークンの有効期限が切れました。"))
 
 		} else if err != nil {
 			writeResponse(w, http.StatusNotAcceptable, authResponse(false, err.Error()))

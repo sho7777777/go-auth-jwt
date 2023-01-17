@@ -15,7 +15,7 @@ func main() {
 	r := mux.NewRouter()
 
 	// エンドポイント
-	r.HandleFunc("/resource/{id:[0-9]+}", getResource).Methods(http.MethodGet).Name("getResource")
+	r.HandleFunc("/resource/{id:[0-9]+}", getResource).Methods(http.MethodGet, "OPTIONS").Name("getResource")
 	r.HandleFunc("/admin", adminPage).Methods(http.MethodGet).Name("adminPage")
 
 	// 認証処理をミドルウェアとして利用
@@ -41,6 +41,12 @@ func authHandler() func(http.Handler) http.Handler {
 	// シグネチャを合わせるためにクロージャにする
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// CORS対応
+			w.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Access-Control-Allow-Origin, Authorization")
+			if r.Method == "OPTIONS" {
+				return
+			}
 
 			currentRoute := mux.CurrentRoute(r)
 			// currentRoute: getResource
@@ -57,12 +63,12 @@ func authHandler() func(http.Handler) http.Handler {
 				accessToken := getTokenFromHeader(authHeader)
 
 				//
-				isAuthorized, msg := isAuthorized(accessToken, currentRoute.GetName(), currentRouteVars)
+				m := isAuthorized(accessToken, currentRoute.GetName(), currentRouteVars)
 
-				if isAuthorized {
+				if m["isAuthorized"].(bool) {
 					next.ServeHTTP(w, r)
 				} else {
-					writeResponse(w, http.StatusNotAcceptable, msg)
+					writeResponse(w, http.StatusNotAcceptable, m)
 				}
 			} else {
 				writeResponse(w, http.StatusUnauthorized, "アクセストークンがありません。")
@@ -82,7 +88,9 @@ func getTokenFromHeader(header string) string {
 	return ""
 }
 
-func isAuthorized(accessToken string, routeName string, vars map[string]string) (bool, string) {
+// func isAuthorized(accessToken string, routeName string, vars map[string]string) (bool, string) {
+func isAuthorized(accessToken string, routeName string, vars map[string]string) map[string]interface{} {
+	m := map[string]interface{}{"isAuthorized": false, "message": ""}
 
 	// 認証サーバーのURLを構築
 	u := buildVerifyUrl(accessToken, routeName, vars)
@@ -92,19 +100,16 @@ func isAuthorized(accessToken string, routeName string, vars map[string]string) 
 	response, err := http.Get(u)
 
 	if err != nil {
-		fmt.Println("認証サーバーとの通信に失敗しました。" + err.Error())
-		return false, ""
+		m["isAuthorized"] = false
+		m["message"] = fmt.Errorf("認証サーバーとの通信に失敗しました。: %v", err.Error())
+		return m
 	} else {
-
-		m := map[string]interface{}{}
 		if err = json.NewDecoder(response.Body).Decode(&m); err != nil {
-			fmt.Println("デコードに失敗しました: " + err.Error())
-			return false, ""
+			m["isAuthorized"] = false
+			m["message"] = fmt.Errorf("デコードに失敗しました: %v", err.Error())
+			return m
 		}
-
-		isAuthorized := m["isAuthorized"].(bool)
-		msg := m["message"].(string)
-		return isAuthorized, msg
+		return m
 	}
 }
 
@@ -115,7 +120,6 @@ func buildVerifyUrl(accessToken string, routeName string, vars map[string]string
 	// u: {http   localhost:8001 /auth/verify  false false   }
 
 	q := u.Query()
-	fmt.Println("q: ", q)
 	// q:  map[]
 
 	// クエリパラメータをURlに設定
