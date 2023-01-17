@@ -23,6 +23,16 @@ func FindBy(id, password string) (*User, error) {
 	return nil, errors.New("Idかパスワードが正しくありません。")
 }
 
+func RefreshTokenExists(rt string) error {
+	// リクエストで送られてきたものと同じリフレッシュトークンがDBに存在するか確認する
+	// ここでは同じものが存在すると仮定
+	refreshTokenExists := true
+	if !refreshTokenExists {
+		return errors.New("リフレッシュトークンがDBに存在しません")
+	}
+	return nil
+}
+
 // リフレッシュトークンをDBに格納
 func SaveRefreshToken(rt string) error {
 
