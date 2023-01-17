@@ -98,9 +98,10 @@ func Verify(w http.ResponseWriter, r *http.Request) {
 	}
 	// urlParams: map[accessToken:eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzX3Rva2VuIiwiaWQiOiIxMjM0IiwidXNlcl9uYW1lIjoiSm9obiBEb2UiLCJyb2xlIjoidXNlciIsImV4cCI6MTY3MzkzOTYzOS4yOTE5MzF9.6AjWbUPSD0O8w9eL7TnZ9yyFCYw_WNrm6tRKSoJHTZQ id:1234 routeName:getResource]
 
+	var err error
 	// アクセストークンがある場合
 	if urlParams["accessToken"] != "" {
-		err := service.Verify(urlParams)
+		err = service.Verify(urlParams)
 
 		// アクセストークンの有効期限が切れている場合
 		if _, ok := err.(*jwt.TokenExpiredError); ok {
@@ -114,7 +115,7 @@ func Verify(w http.ResponseWriter, r *http.Request) {
 
 		// アクセストークンがない場合
 	} else {
-		writeResponse(w, http.StatusForbidden, authResponse(false, "missing token"))
+		writeResponse(w, http.StatusForbidden, authResponse(false, "アクセストークンがありません。"))
 	}
 }
 

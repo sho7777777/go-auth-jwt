@@ -14,7 +14,7 @@ func FindBy(id, password string) (*User, error) {
 		u = User{
 			Id:       "1234",
 			Username: "John Doe",
-			Role:     "user",
+			Role:     "admin",
 		}
 		return &u, nil
 	}

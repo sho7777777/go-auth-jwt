@@ -16,7 +16,7 @@ func main() {
 
 	// エンドポイント
 	r.HandleFunc("/resource/{id:[0-9]+}", getResource).Methods(http.MethodGet, "OPTIONS").Name("getResource")
-	r.HandleFunc("/admin", adminPage).Methods(http.MethodGet).Name("adminPage")
+	r.HandleFunc("/admin", adminPage).Methods(http.MethodGet, "OPTIONS").Name("adminPage")
 
 	// 認証処理をミドルウェアとして利用
 	r.Use(authHandler())

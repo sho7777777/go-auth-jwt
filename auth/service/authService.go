@@ -148,7 +148,7 @@ func Verify(urlParams map[string]string) error {
 		isAuthorized := false
 		var routeAccessible []string
 
-		// ユーザー権限の場合
+		// RBAC
 		switch claims.Role {
 		case "user":
 			routeAccessible = domain.GetRouteForUser()
@@ -163,7 +163,7 @@ func Verify(urlParams map[string]string) error {
 		}
 
 		if !isAuthorized {
-			return errors.New("access not allowed")
+			return errors.New("アクセスが許可されていません。")
 		}
 		return nil
 
