@@ -17,6 +17,7 @@ func main() {
 
 	// エンドポイント
 	r.HandleFunc("/auth/login", http.HandlerFunc(Login)).Methods(http.MethodPost)
+	r.HandleFunc("/auth/refresh", http.HandlerFunc(Refresh)).Methods(http.MethodPost)
 
 	// サーバー起動
 	fmt.Println("Starting server on port 8001")
@@ -46,6 +47,25 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		} else {
 			// アクセストークン、リフレッシュトークンをレスポンスとして返す
 			writeResponse(w, http.StatusOK, *loginResponse)
+		}
+	}
+}
+
+func Refresh(w http.ResponseWriter, r *http.Request) {
+
+	// アクセストークンとリフレッシュトークンを格納するDTO
+	var refreshRequest dto.RefreshTokenRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&refreshRequest); err != nil {
+		err := fmt.Errorf("エラーが発生しました: %v", err)
+		writeResponse(w, http.StatusBadRequest, err.Error())
+	} else {
+		// アクセストークンの取得
+		token, err := service.Refresh(refreshRequest)
+		if err != nil {
+			writeResponse(w, http.StatusNotAcceptable, err.Error())
+		} else {
+			writeResponse(w, http.StatusOK, *token)
 		}
 	}
 }
