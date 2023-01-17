@@ -1,6 +1,6 @@
 import axios from "axios"
 import { useState } from "react"
-import { Success } from "./component/Success"
+import { Resource } from "./component/Resource"
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useCookies } from "react-cookie";
 
@@ -21,7 +21,7 @@ function App() {
       setShowErr(false)
       setCookie("accessToken", res.data.access_token, { maxAge: 3600 })
       setCookie("refreshToken", res.data.refresh_token, { maxAge: 3600 })
-      navigate("/success")
+      navigate("/resource")
     }).catch(err => {
       console.log(err)
       console.log(err.response.status)
@@ -44,7 +44,6 @@ function App() {
 
   return (
     <Routes>
-
       <Route path="/" element={
         <div style={{ marginTop: "10px", marginLeft: "5px", width: "300px" }}>
           <table>
@@ -65,9 +64,7 @@ function App() {
           {showErr && <p>{err}</p>}
         </div>}>
       </Route>
-      <Route path="success" element={<Success cookies={cookies} />}></Route>
-
-
+      <Route path="resource/*" element={<Resource cookies={cookies} />}></Route>
     </Routes >
   );
 }
